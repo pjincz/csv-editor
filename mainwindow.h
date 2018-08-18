@@ -7,6 +7,8 @@ namespace Ui {
 class MainWindow;
 }
 
+class CommandCenter;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -29,10 +31,14 @@ public slots:
     void on_actionPasteAppend_triggered();
     void on_actionPastePrepend_triggered();
 
+    void on_actionUndo_triggered();
+    void on_actionRedo_triggered();
+
 private:
     Ui::MainWindow *ui;
 
     QString m_filename;
+    CommandCenter * m_cc;
 };
 
 #endif // MAINWINDOW_H
