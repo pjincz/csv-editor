@@ -3,6 +3,7 @@
 #include "QDebug"
 #include "csv.h"
 #include <QFileDialog>
+#include <QSettings>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -16,10 +17,24 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+QString MainWindow::_getOpenFile()
+{
+    QSettings s;
+    QString lastOpenDir = s.value("lastOpenDir").toString();
+
+    QString fname = QFileDialog::getOpenFileName(this, "Choose csv...", lastOpenDir, "CSV Files (*.csv);;All Files(*)");
+    if (!fname.isEmpty()) {
+        lastOpenDir = QFileInfo(fname).absolutePath();
+        s.setValue("lastOpenDir", lastOpenDir);
+    }
+
+    m_filename = fname;
+    return fname;
+}
+
 void MainWindow::on_actionOpen_triggered()
 {
-    QString fname = QFileDialog::getOpenFileName(this, "Choose csv...", QString(), "CSV Files (*.csv);;All Files(*)");
-    m_filename = fname;
+    QString fname = _getOpenFile();
 
     QList<QStringList> cont = CSV::parseFromFile(fname, "UTF-8");
 
