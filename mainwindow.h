@@ -23,6 +23,12 @@ public slots:
     void on_actionSave_triggered();
     void on_actionExit_triggered();
 
+    void on_actionCopy_triggered();
+    void on_actionPaste_triggered();
+    void on_actionClear_triggered();
+    void on_actionPasteAppend_triggered();
+    void on_actionPastePrepend_triggered();
+
 private:
     Ui::MainWindow *ui;
 

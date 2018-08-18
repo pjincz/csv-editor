@@ -4,6 +4,7 @@
 #include "csv.h"
 #include <QFileDialog>
 #include <QSettings>
+#include <QClipboard>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -82,4 +83,60 @@ void MainWindow::on_actionSave_triggered()
 void MainWindow::on_actionExit_triggered()
 {
     qApp->exit();
+}
+
+void MainWindow::on_actionCopy_triggered()
+{
+    QTableWidget * tw = ui->tableWidget;
+
+    QClipboard * clip = QGuiApplication::clipboard();
+    clip->setText(tw->currentItem()->text());
+}
+
+void MainWindow::on_actionPaste_triggered()
+{
+    QTableWidget * tw = ui->tableWidget;
+
+    QClipboard * clip = QGuiApplication::clipboard();
+    QString text = clip->text();
+
+    QList<QTableWidgetItem*> si = tw->selectedItems();
+    for (QTableWidgetItem* item : si) {
+        item->setText(text);
+    }
+}
+
+void MainWindow::on_actionClear_triggered()
+{
+    QTableWidget * tw = ui->tableWidget;
+
+    QList<QTableWidgetItem*> si = tw->selectedItems();
+    for (QTableWidgetItem* item : si) {
+        item->setText("");
+    }
+}
+
+void MainWindow::on_actionPasteAppend_triggered() {
+    QTableWidget * tw = ui->tableWidget;
+
+    QClipboard * clip = QGuiApplication::clipboard();
+    QString text = clip->text();
+
+    QList<QTableWidgetItem*> si = tw->selectedItems();
+    for (QTableWidgetItem* item : si) {
+        item->setText(item->text() + text);
+    }
+}
+
+void MainWindow::on_actionPastePrepend_triggered()
+{
+    QTableWidget * tw = ui->tableWidget;
+
+    QClipboard * clip = QGuiApplication::clipboard();
+    QString text = clip->text();
+
+    QList<QTableWidgetItem*> si = tw->selectedItems();
+    for (QTableWidgetItem* item : si) {
+        item->setText(text + item->text());
+    }
 }
