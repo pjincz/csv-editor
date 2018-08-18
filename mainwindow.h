@@ -16,7 +16,7 @@ public:
     ~MainWindow();
 
 public slots:
-    void on_actionLoad_triggered();
+    void on_actionOpen_triggered();
     void on_actionSave_triggered();
     void on_actionExit_triggered();
 
