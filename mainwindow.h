@@ -38,6 +38,8 @@ public slots:
     void on_actionUndo_triggered();
     void on_actionRedo_triggered();
 
+    void on_actionAbout_triggered();
+
     void onChanged();
 
 private:

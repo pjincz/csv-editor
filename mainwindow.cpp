@@ -7,6 +7,7 @@
 #include <QClipboard>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QDesktopServices>
 
 class Command {
 public:
@@ -378,6 +379,11 @@ void MainWindow::on_actionUndo_triggered()
 void MainWindow::on_actionRedo_triggered()
 {
     m_cc->redo();
+}
+
+void MainWindow::on_actionAbout_triggered()
+{
+    QDesktopServices::openUrl(QUrl("https://github.com/jinchizhong/csv-editor"));
 }
 
 void MainWindow::onChanged()
