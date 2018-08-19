@@ -17,8 +17,12 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+protected:
+    void closeEvent(QCloseEvent *event);
+
 private:
     QString _getOpenFile();
+    void updateTitle();
 
 public slots:
     void on_actionOpen_triggered();
@@ -34,11 +38,14 @@ public slots:
     void on_actionUndo_triggered();
     void on_actionRedo_triggered();
 
+    void onChanged();
+
 private:
     Ui::MainWindow *ui;
 
     QString m_filename;
     CommandCenter * m_cc;
+    bool m_dirt;
 };
 
 #endif // MAINWINDOW_H

@@ -5,6 +5,8 @@
 #include <QFileDialog>
 #include <QSettings>
 #include <QClipboard>
+#include <QMessageBox>
+#include <QCloseEvent>
 
 class Command {
 public:
@@ -50,6 +52,8 @@ struct CommandGroup : public QList<QSharedPointer<Command>>
 };
 
 class CommandCenter : public QObject {
+    Q_OBJECT
+
 public:
     CommandCenter(QObject * parent, QTableWidget * tw)
         : QObject(parent), m_tw(tw), m_curStatus(0), m_inTransaction(false)
@@ -90,6 +94,8 @@ public:
             m_history.pop_back();
 
         m_inTransaction = false;
+
+        emit commited();
     }
 
     void undo() {
@@ -106,6 +112,8 @@ public:
             m_tw->setRangeSelected(s, true);
 
         m_curStatus -= 1;
+
+        emit undone();
     }
 
     void redo() {
@@ -122,7 +130,24 @@ public:
             m_tw->setRangeSelected(s, true);
 
         m_curStatus += 1;
+
+        emit redone();
     }
+
+    void clear() {
+        m_history.clear();
+        m_curStatus = 0;
+        m_inTransaction = false;
+    }
+
+    int length() {
+        return m_history.length();
+    }
+
+signals:
+    void commited();
+    void undone();
+    void redone();
 
 private:
     QTableWidget * m_tw;
@@ -166,15 +191,36 @@ private:
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    m_dirt(false)
 {
     ui->setupUi(this);
     m_cc = new CommandCenter(this, ui->tableWidget);
+
+    connect(m_cc, SIGNAL(commited()), this, SLOT(onChanged()));
+    connect(m_cc, SIGNAL(undone()), this, SLOT(onChanged()));
+    connect(m_cc, SIGNAL(redone()), this, SLOT(onChanged()));
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (m_dirt) {
+        int ir = QMessageBox::information(this, QString(), "Do you want to save the changes you made?",
+                                 QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        if (ir == QMessageBox::Yes) {
+            on_actionSave_triggered();
+            event->accept();
+        } else if (ir == QMessageBox::No) {
+            event->accept();
+        } else if (ir == QMessageBox::Cancel) {
+            event->ignore();
+        }
+    }
 }
 
 QString MainWindow::_getOpenFile()
@@ -192,6 +238,12 @@ QString MainWindow::_getOpenFile()
     return fname;
 }
 
+void MainWindow::updateTitle()
+{
+    QString title = "CSV Editor - " + m_filename + (m_dirt ? " *" : "");
+    setWindowTitle(title);
+}
+
 void MainWindow::on_actionOpen_triggered()
 {
     QString fname = _getOpenFile();
@@ -199,8 +251,8 @@ void MainWindow::on_actionOpen_triggered()
     QList<QStringList> cont = CSV::parseFromFile(fname, "UTF-8");
 
     ui->tableWidget->clear();
-    m_cc->deleteLater();
-    m_cc = new CommandCenter(this, ui->tableWidget);
+    m_cc->clear();
+    m_dirt = false;
 
     QStringList header = cont[0];
     cont.pop_front();
@@ -218,6 +270,8 @@ void MainWindow::on_actionOpen_triggered()
     }
 
     ui->tableWidget->resizeColumnsToContents();
+
+    updateTitle();
 }
 
 void MainWindow::on_actionSave_triggered()
@@ -239,6 +293,9 @@ void MainWindow::on_actionSave_triggered()
     }
 
     CSV::write(data, m_filename, "UTF-8");
+
+    m_dirt = false;
+    updateTitle();
 }
 
 void MainWindow::on_actionExit_triggered()
@@ -322,3 +379,12 @@ void MainWindow::on_actionRedo_triggered()
 {
     m_cc->redo();
 }
+
+void MainWindow::onChanged()
+{
+    m_dirt = true;
+    updateTitle();
+}
+
+
+#include "mainwindow.moc"
