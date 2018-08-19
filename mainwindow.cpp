@@ -43,7 +43,11 @@ private:
     QVariant m_newData;
 };
 
-typedef QList<QSharedPointer<Command>> CommandGroup;
+struct CommandGroup : public QList<QSharedPointer<Command>>
+{
+    QList<QTableWidgetSelectionRange> prevSelection;
+    QList<QTableWidgetSelectionRange> postSelection;
+};
 
 class CommandCenter : public QObject {
 public:
@@ -58,6 +62,8 @@ public:
         }
 
         m_history.push_back(CommandGroup());
+        m_history.last().prevSelection = m_tw->selectedRanges();
+
         m_inTransaction = true;
     }
 
@@ -76,8 +82,10 @@ public:
         if (!m_inTransaction)
             return;
 
-        if (m_history.last().length() > 0)
+        if (m_history.last().length() > 0) {
             m_curStatus += 1;
+            m_history.last().postSelection = m_tw->selectedRanges();
+        }
         else
             m_history.pop_back();
 
@@ -93,6 +101,10 @@ public:
             g[i]->undo(m_tw);
         }
 
+        m_tw->clearSelection();
+        for (auto & s : g.prevSelection)
+            m_tw->setRangeSelected(s, true);
+
         m_curStatus -= 1;
     }
 
@@ -104,6 +116,12 @@ public:
         for (int i = 0; i < g.length(); ++i) {
             g[i]->redo(m_tw);
         }
+
+        m_tw->clearSelection();
+        for (auto & s : g.postSelection)
+            m_tw->setRangeSelected(s, true);
+
+        m_curStatus += 1;
     }
 
 private:
