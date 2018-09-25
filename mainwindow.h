@@ -44,6 +44,9 @@ public slots:
 
     void onChanged();
 
+private slots:
+    void on_actionAddColumn_triggered();
+
 private:
     Ui::MainWindow *ui;
     TableWidget * m_tw;

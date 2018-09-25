@@ -1,12 +1,24 @@
 #include "tablewidget.h"
 #include <QStack>
 
+class CommandCenter;
+
 class Command {
 public:
-    virtual void redo(QTableWidget * tw) = 0;
-    virtual void undo(QTableWidget * tw) = 0;
+    virtual void redo(QTableWidget * tw, CommandCenter * cc) = 0;
+    virtual void undo(QTableWidget * tw, CommandCenter * cc) = 0;
     virtual ~Command() {}
 };
+
+class MyTableWidgetItem : public QTableWidgetItem {
+public:
+    MyTableWidgetItem(CommandCenter * cc, QString text);
+    virtual void setData(int role, const QVariant &value);
+
+private:
+    CommandCenter * m_cc;
+};
+
 
 class SetDataCommand : public Command {
 public:
@@ -20,12 +32,12 @@ public:
 
     }
 
-    void redo(QTableWidget *tw) {
+    void redo(QTableWidget *tw, CommandCenter *) {
         QTableWidgetItem* item = tw->item(m_i, m_j);
         item->QTableWidgetItem::setData(m_role, m_newData);
     }
 
-    void undo(QTableWidget *tw) {
+    void undo(QTableWidget *tw, CommandCenter *) {
         QTableWidgetItem* item = tw->item(m_i, m_j);
         item->QTableWidgetItem::setData(m_role, m_oldData);
     }
@@ -36,6 +48,34 @@ private:
     int m_role;
     QVariant m_oldData;
     QVariant m_newData;
+};
+
+class AddColumnCommand : public Command {
+public:
+    AddColumnCommand(const QString &title)
+        : m_title(title)
+    {
+    }
+
+    ~AddColumnCommand() {
+    }
+
+    void redo(QTableWidget *tw, CommandCenter * cc) {
+        int col = tw->columnCount();
+        tw->setColumnCount(col + 1);
+        tw->setHorizontalHeaderItem(col, new MyTableWidgetItem(cc, m_title));
+
+        for (int i = 0; i < tw->rowCount(); ++i) {
+            tw->setItem(i, col, new MyTableWidgetItem(cc, ""));
+        }
+    }
+
+    void undo(QTableWidget *tw, CommandCenter *) {
+        int col = tw->columnCount();
+        tw->setColumnCount(col - 1);
+    }
+private:
+    QString m_title;
 };
 
 struct CommandGroup : public QList<QSharedPointer<Command>>
@@ -72,7 +112,7 @@ public:
     void addCommand(Command * cmd) {
         if (!m_transStack.empty()) {
             m_history.last().append(QSharedPointer<Command>(cmd));
-            cmd->redo(m_tw);
+            cmd->redo(m_tw, this);
         } else {
             begin(QString());
             addCommand(cmd);
@@ -104,7 +144,7 @@ public:
 
         CommandGroup & g = m_history[m_curStatus - 1];
         for (int i = g.length() - 1; i >= 0; --i) {
-            g[i]->undo(m_tw);
+            g[i]->undo(m_tw, this);
         }
 
         m_tw->clearSelection();
@@ -122,7 +162,7 @@ public:
 
         CommandGroup & g = m_history[m_curStatus];
         for (int i = 0; i < g.length(); ++i) {
-            g[i]->redo(m_tw);
+            g[i]->redo(m_tw, this);
         }
 
         m_tw->clearSelection();
@@ -157,22 +197,17 @@ private:
 };
 
 
-class MyTableWidgetItem : public QTableWidgetItem {
-public:
-    MyTableWidgetItem(CommandCenter * cc, QString text)
-        : QTableWidgetItem(text)
-        , m_cc(cc)
-    {
-    }
 
-    virtual void setData(int role, const QVariant &value) {
-        Command * cmd = new SetDataCommand(this->row(), this->column(), role, this->data(role), value);
-        m_cc->addCommand(cmd);
-    }
+MyTableWidgetItem::MyTableWidgetItem(CommandCenter * cc, QString text)
+    : QTableWidgetItem(text)
+    , m_cc(cc)
+{
+}
 
-private:
-    CommandCenter * m_cc;
-};
+void MyTableWidgetItem::setData(int role, const QVariant &value) {
+    Command * cmd = new SetDataCommand(this->row(), this->column(), role, this->data(role), value);
+    m_cc->addCommand(cmd);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// TableWidget
@@ -224,15 +259,15 @@ QString TableWidget::header(int c)
     return m_tw->horizontalHeaderItem(c)->text();
 }
 
-void TableWidget::addColumn(QString title)
+int TableWidget::addColumn(QString title)
 {
-    // TODO undo support
-    m_tw->setColumnCount(m_tw->columnCount() + 1);
-    m_tw->setHorizontalHeaderItem(m_tw->columnCount() - 1, new MyTableWidgetItem(m_cc, title));
+    m_cc->addCommand(new AddColumnCommand(title));
+    return m_tw->columnCount() - 1;
 }
 
 void TableWidget::addRow(QStringList cont)
 {
+    // TODO undo support
     int row = m_tw->rowCount();
     m_tw->setRowCount(row + 1);
 
@@ -260,6 +295,11 @@ TableWidgetSelection TableWidget::selection()
 void TableWidget::resizeColumnsToContents()
 {
     m_tw->resizeColumnsToContents();
+}
+
+void TableWidget::resizeColumnToContents(int col)
+{
+    m_tw->resizeColumnToContents(col);
 }
 
 void TableWidget::undo()

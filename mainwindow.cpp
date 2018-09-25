@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "csv.h"
 #include "tablewidget.h"
+#include "dialogaddcolumn.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -258,4 +259,10 @@ QString MainWindow::_guessCrlf(const QString & cont)
     if (crlf >= cr)
         return "\r\n";
     return "\r";
+}
+
+void MainWindow::on_actionAddColumn_triggered()
+{
+    DialogAddColumn dlg(this, m_tw);
+    dlg.exec();
 }

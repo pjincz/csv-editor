@@ -27,14 +27,17 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
         csv.cpp \
-        tablewidget.cpp
+        tablewidget.cpp \
+        dialogaddcolumn.cpp
 
 HEADERS += \
         mainwindow.h \
         csv.h \
-        tablewidget.h
+        tablewidget.h \
+        dialogaddcolumn.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+        dialogaddcolumn.ui
 
 win32:RC_ICONS += icon.ico

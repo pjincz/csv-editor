@@ -51,8 +51,15 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menu_Column">
+    <property name="title">
+     <string>&amp;Column</string>
+    </property>
+    <addaction name="actionAddColumn"/>
+   </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Edit"/>
+   <addaction name="menu_Column"/>
    <addaction name="menu_Help"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -128,6 +135,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+X</string>
+   </property>
+  </action>
+  <action name="actionAddColumn">
+   <property name="text">
+    <string>&amp;Add</string>
    </property>
   </action>
  </widget>

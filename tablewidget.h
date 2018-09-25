@@ -24,11 +24,12 @@ public:
     void setText(int r, int c, const QString &text);
     QString header(int c);
 
-    void addColumn(QString title);
+    int addColumn(QString title);
     void addRow(QStringList row);
 
     TableWidgetSelection selection();
     void resizeColumnsToContents();
+    void resizeColumnToContents(int col);
 
     void undo();
     void redo();
