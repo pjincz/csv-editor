@@ -1,15 +1,27 @@
 #include "mainwindow.h"
 #include <QApplication>
+#include <QCommandLineParser>
+#include <QDebug>
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
+    QApplication app(argc, argv);
 
-    a.setOrganizationName("Chizhong Jin");
-    a.setApplicationName("csv-editor");
+    app.setOrganizationName("Chizhong Jin");
+    app.setApplicationName("csv-editor");
+
+    QCommandLineParser parser;
+    parser.addPositionalArgument("file", 
+            QCoreApplication::translate("main", "File to open"));
+
+    parser.process(app);
 
     MainWindow w;
     w.show();
 
-    return a.exec();
+    if (parser.positionalArguments().length() > 0) {
+        w.openFile(parser.positionalArguments()[0]);
+    }
+
+    return app.exec();
 }

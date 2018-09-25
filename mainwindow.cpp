@@ -241,18 +241,8 @@ QString MainWindow::_getOpenFile()
     return QString();
 }
 
-void MainWindow::updateTitle()
+void MainWindow::openFile(QString fname)
 {
-    QString title = "CSV Editor - " + m_filename + (m_dirt ? " *" : "");
-    setWindowTitle(title);
-}
-
-void MainWindow::on_actionOpen_triggered()
-{
-    QString fname = _getOpenFile();
-    if (fname.isEmpty())
-        return;
-
     QList<QStringList> cont = CSV::parseFromFile(fname, "UTF-8");
 
     ui->tableWidget->clear();
@@ -279,6 +269,21 @@ void MainWindow::on_actionOpen_triggered()
     ui->tableWidget->resizeColumnsToContents();
 
     updateTitle();
+}
+
+void MainWindow::updateTitle()
+{
+    QString title = "CSV Editor - " + m_filename + (m_dirt ? " *" : "");
+    setWindowTitle(title);
+}
+
+void MainWindow::on_actionOpen_triggered()
+{
+    QString fname = _getOpenFile();
+    if (fname.isEmpty())
+        return;
+
+    openFile(fname);
 }
 
 void MainWindow::on_actionSave_triggered()
