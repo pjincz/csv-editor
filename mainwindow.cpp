@@ -234,7 +234,6 @@ QString MainWindow::_getOpenFile()
         lastOpenDir = QFileInfo(fname).absolutePath();
         s.setValue("lastOpenDir", lastOpenDir);
 
-        m_filename = fname;
         return fname;
     }
 
@@ -268,6 +267,7 @@ void MainWindow::openFile(QString fname)
 
     ui->tableWidget->resizeColumnsToContents();
 
+    m_filename = fname;
     updateTitle();
 }
 
