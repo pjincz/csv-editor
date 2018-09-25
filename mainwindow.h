@@ -7,7 +7,7 @@ namespace Ui {
 class MainWindow;
 }
 
-class CommandCenter;
+class TableWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -35,8 +35,6 @@ public slots:
     void on_actionCopy_triggered();
     void on_actionPaste_triggered();
     void on_actionClear_triggered();
-    void on_actionPasteAppend_triggered();
-    void on_actionPastePrepend_triggered();
 
     void on_actionUndo_triggered();
     void on_actionRedo_triggered();
@@ -47,10 +45,10 @@ public slots:
 
 private:
     Ui::MainWindow *ui;
+    TableWidget * m_tw;
 
     QString m_filename;
     QString m_crlf = "\n";
-    CommandCenter * m_cc;
     bool m_dirt;
 };
 

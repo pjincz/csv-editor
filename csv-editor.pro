@@ -26,11 +26,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-        csv.cpp
+        csv.cpp \
+        tablewidget.cpp
 
 HEADERS += \
         mainwindow.h \
-        csv.h
+        csv.h \
+        tablewidget.h
 
 FORMS += \
         mainwindow.ui

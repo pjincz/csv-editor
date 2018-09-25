@@ -1,197 +1,16 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "QDebug"
 #include "csv.h"
-#include <QFileDialog>
-#include <QSettings>
-#include <QClipboard>
-#include <QMimeData>
+#include "tablewidget.h"
+
+#include <QDebug>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QSettings>
+#include <QFileDialog>
+#include <QClipboard>
+#include <QMimeData>
 #include <QDesktopServices>
-#include <QRegularExpression>
-#include <QRegularExpressionMatchIterator>
-
-class Command {
-public:
-    virtual void redo(QTableWidget * tw) = 0;
-    virtual void undo(QTableWidget * tw) = 0;
-    virtual ~Command() {};
-};
-
-class SetDataCommand : public Command {
-public:
-    SetDataCommand(int i, int j, int role, QVariant oldData, QVariant newData)
-        : m_i(i), m_j(j), m_role(role), m_oldData(oldData), m_newData(newData)
-    {
-
-    }
-
-    ~SetDataCommand() {
-
-    }
-
-    void redo(QTableWidget *tw) {
-        QTableWidgetItem* item = tw->item(m_i, m_j);
-        item->QTableWidgetItem::setData(m_role, m_newData);
-    }
-
-    void undo(QTableWidget *tw) {
-        QTableWidgetItem* item = tw->item(m_i, m_j);
-        item->QTableWidgetItem::setData(m_role, m_oldData);
-    }
-
-private:
-    int m_i;
-    int m_j;
-    int m_role;
-    QVariant m_oldData;
-    QVariant m_newData;
-};
-
-struct CommandGroup : public QList<QSharedPointer<Command>>
-{
-    QList<QTableWidgetSelectionRange> prevSelection;
-    QList<QTableWidgetSelectionRange> postSelection;
-};
-
-class CommandCenter : public QObject {
-    Q_OBJECT
-
-public:
-    CommandCenter(QObject * parent, QTableWidget * tw)
-        : QObject(parent), m_tw(tw), m_curStatus(0), m_inTransaction(false)
-    {
-    }
-
-    void begin() {
-        while (m_history.length() > m_curStatus) {
-            m_history.pop_back();
-        }
-
-        m_history.push_back(CommandGroup());
-        m_history.last().prevSelection = m_tw->selectedRanges();
-
-        m_inTransaction = true;
-    }
-
-    void addCommand(Command * cmd) {
-        if (m_inTransaction) {
-            m_history.last().append(QSharedPointer<Command>(cmd));
-            cmd->redo(m_tw);
-        } else {
-            begin();
-            addCommand(cmd);
-            commit();
-        }
-    }
-
-    void commit() {
-        if (!m_inTransaction)
-            return;
-
-        if (m_history.last().length() > 0) {
-            m_curStatus += 1;
-            m_history.last().postSelection = m_tw->selectedRanges();
-        }
-        else
-            m_history.pop_back();
-
-        m_inTransaction = false;
-
-        emit commited();
-    }
-
-    void undo() {
-        if (m_curStatus == 0)
-            return;
-
-        CommandGroup & g = m_history[m_curStatus - 1];
-        for (int i = g.length() - 1; i >= 0; --i) {
-            g[i]->undo(m_tw);
-        }
-
-        m_tw->clearSelection();
-        for (auto & s : g.prevSelection)
-            m_tw->setRangeSelected(s, true);
-
-        m_curStatus -= 1;
-
-        emit undone();
-    }
-
-    void redo() {
-        if (m_curStatus >= m_history.length())
-            return;
-
-        CommandGroup & g = m_history[m_curStatus];
-        for (int i = 0; i < g.length(); ++i) {
-            g[i]->redo(m_tw);
-        }
-
-        m_tw->clearSelection();
-        for (auto & s : g.postSelection)
-            m_tw->setRangeSelected(s, true);
-
-        m_curStatus += 1;
-
-        emit redone();
-    }
-
-    void clear() {
-        m_history.clear();
-        m_curStatus = 0;
-        m_inTransaction = false;
-    }
-
-    int length() {
-        return m_history.length();
-    }
-
-signals:
-    void commited();
-    void undone();
-    void redone();
-
-private:
-    QTableWidget * m_tw;
-    QList<CommandGroup> m_history;
-    int m_curStatus;
-    bool m_inTransaction;
-};
-
-class MyTableWidgetItem : public QTableWidgetItem {
-public:
-    MyTableWidgetItem(CommandCenter * cc, QString text)
-        : QTableWidgetItem(text)
-        , m_cc(cc)
-    {
-    }
-
-    virtual void setData(int role, const QVariant &value) {
-        Command * cmd = new SetDataCommand(this->row(), this->column(), role, this->data(role), value);
-        m_cc->addCommand(cmd);
-    }
-
-private:
-    CommandCenter * m_cc;
-};
-
-class TransactionLocker
-{
-public:
-    TransactionLocker(CommandCenter * cc, QString)
-        : m_cc(cc)
-    {
-        m_cc->begin();
-    }
-    ~TransactionLocker() {
-        m_cc->commit();
-    }
-
-private:
-    CommandCenter * m_cc;
-};
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -199,17 +18,16 @@ MainWindow::MainWindow(QWidget *parent) :
     m_dirt(false)
 {
     ui->setupUi(this);
-    m_cc = new CommandCenter(this, ui->tableWidget);
+    m_tw = ui->centralWidget;
 
-    connect(m_cc, SIGNAL(commited()), this, SLOT(onChanged()));
-    connect(m_cc, SIGNAL(undone()), this, SLOT(onChanged()));
-    connect(m_cc, SIGNAL(redone()), this, SLOT(onChanged()));
+    connect(m_tw, SIGNAL(changed()), this, SLOT(onChanged()));
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
+
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
@@ -258,28 +76,22 @@ void MainWindow::openFile(QString fname)
 
     QList<QStringList> cont = CSV::parseFromString(strCont);
 
-    ui->tableWidget->clear();
-    m_cc->clear();
+    m_tw->reset();
     m_dirt = false;
 
     QStringList header = cont[0];
     cont.pop_front();
     int columns = header.length();
-    ui->tableWidget->setColumnCount(columns);
-    for (int i = 0; i < header.length(); ++i) {
-        ui->tableWidget->setHorizontalHeaderItem(i, new MyTableWidgetItem(m_cc, header[i]));
+    for (int i = 0; i < columns; ++i) {
+        m_tw->addColumn(header[i]);
     }
 
-    ui->tableWidget->setRowCount(cont.length());
     for (int i = 0; i < cont.length(); ++i) {
         QStringList line = cont[i];
-        for (int j = 0; j < columns; ++j) {
-            QString text = j >= line.length() ? "" : line[j];
-            ui->tableWidget->setItem(i, j, new MyTableWidgetItem(m_cc, text));
-        }
+        m_tw->addRow(line);
     }
 
-    ui->tableWidget->resizeColumnsToContents();
+    m_tw->resizeColumnsToContents();
 
     m_filename = fname;
     m_crlf = _guessCrlf(strCont);
@@ -306,15 +118,15 @@ void MainWindow::on_actionSave_triggered()
     QList<QStringList> data;
 
     QStringList header;
-    for (int i = 0; i < ui->tableWidget->columnCount(); ++i) {
-        header.append(ui->tableWidget->horizontalHeaderItem(i)->text());
+    for (int i = 0; i < m_tw->columnCount(); ++i) {
+        header.append(m_tw->header(i));
     }
     data.append(header);
 
-    for (int i = 0; i < ui->tableWidget->rowCount(); ++i) {
+    for (int i = 0; i < m_tw->rowCount(); ++i) {
         QStringList row;
-        for (int j = 0; j < ui->tableWidget->columnCount(); ++j) {
-            row.append(ui->tableWidget->item(i, j)->text());
+        for (int j = 0; j < m_tw->columnCount(); ++j) {
+            row.append(m_tw->text(i, j));
         }
         data.append(row);
     }
@@ -327,25 +139,24 @@ void MainWindow::on_actionSave_triggered()
 
 void MainWindow::on_actionExit_triggered()
 {
-    qApp->exit();
+    close();
 }
 
 void MainWindow::on_actionCopy_triggered()
 {
-    TransactionLocker ts(m_cc, "Copy");
-
-    QTableWidget * tw = ui->tableWidget;
+    TableWidgetTransaction ts(m_tw, "Copy");
 
     QClipboard * clip = QGuiApplication::clipboard();
     QMimeData * data = new QMimeData();
-    data->setText(tw->currentItem()->text());
 
-    QTableWidgetSelectionRange rg = tw->selectedRanges()[0];
+    TableWidgetSelection sel = m_tw->selection();
+    data->setText(m_tw->text(sel.row, sel.col));
+
     QList<QStringList> csvData;
-    for (int row = rg.topRow(); row <= rg.bottomRow(); ++row) {
+    for (int row = sel.top; row <= sel.bottom; ++row) {
         QStringList csvRow;
-        for (int col = rg.leftColumn(); col <= rg.rightColumn(); ++col) {
-            csvRow << tw->item(row, col)->text();
+        for (int col = sel.left; col <= sel.right; ++col) {
+            csvRow << m_tw->text(row, col);
         }
         csvData << csvRow;
     }
@@ -357,9 +168,7 @@ void MainWindow::on_actionCopy_triggered()
 
 void MainWindow::on_actionPaste_triggered()
 {
-    TransactionLocker ts(m_cc, "Paste");
-
-    QTableWidget * tw = ui->tableWidget;
+    TableWidgetTransaction ts(m_tw, "Paste");
 
     QClipboard * clip = QGuiApplication::clipboard();
     const QMimeData * mime = clip->mimeData();
@@ -374,67 +183,37 @@ void MainWindow::on_actionPaste_triggered()
         grid << sl;
     }
 
-    QTableWidgetSelectionRange rg = tw->selectedRanges()[0];
-    for (int row = rg.topRow(); row <= rg.bottomRow(); ++row) {
-        for (int col = rg.leftColumn(); col <= rg.rightColumn(); ++col) {
-            QTableWidgetItem * item = tw->item(row, col);
-            QStringList x = grid[(row - rg.topRow()) % grid.length()];
-            QString text = x[(col - rg.leftColumn()) % x.length()];
-            item->setText(text);
+    TableWidgetSelection sel = m_tw->selection();
+    for (int row = sel.top; row <= sel.bottom; ++row) {
+        for (int col = sel.left; col <= sel.right; ++col) {
+            QStringList x = grid[(row - sel.top) % grid.length()];
+            QString text = x[(col - sel.left) % x.length()];
+            m_tw->setText(row, col, text);
         }
     }
 }
 
 void MainWindow::on_actionClear_triggered()
 {
-    TransactionLocker ts(m_cc, "Clear");
+    TableWidgetTransaction ts(m_tw, "Clear");
 
-    QTableWidget * tw = ui->tableWidget;
-
-    QList<QTableWidgetItem*> si = tw->selectedItems();
-    for (QTableWidgetItem* item : si) {
-        item->setText("");
+    TableWidgetSelection sel = m_tw->selection();
+    for (int row = sel.top; row <= sel.bottom; ++row) {
+        for (int col = sel.left; col <= sel.right; ++col) {
+            m_tw->setText(row, col, "");
+        }
     }
 }
 
-void MainWindow::on_actionPasteAppend_triggered()
-{
-    TransactionLocker ts(m_cc, "PasteAppend");
-
-    QTableWidget * tw = ui->tableWidget;
-
-    QClipboard * clip = QGuiApplication::clipboard();
-    QString text = clip->text();
-
-    QList<QTableWidgetItem*> si = tw->selectedItems();
-    for (QTableWidgetItem* item : si) {
-        item->setText(item->text() + text);
-    }
-}
-
-void MainWindow::on_actionPastePrepend_triggered()
-{
-    TransactionLocker ts(m_cc, "PastePrepend");
-
-    QTableWidget * tw = ui->tableWidget;
-
-    QClipboard * clip = QGuiApplication::clipboard();
-    QString text = clip->text();
-
-    QList<QTableWidgetItem*> si = tw->selectedItems();
-    for (QTableWidgetItem* item : si) {
-        item->setText(text + item->text());
-    }
-}
 
 void MainWindow::on_actionUndo_triggered()
 {
-    m_cc->undo();
+    m_tw->undo();
 }
 
 void MainWindow::on_actionRedo_triggered()
 {
-    m_cc->redo();
+    m_tw->redo();
 }
 
 void MainWindow::on_actionAbout_triggered()
@@ -472,6 +251,3 @@ QString MainWindow::_guessCrlf(const QString & cont)
         return "\r\n";
     return "\r";
 }
-
-
-#include "mainwindow.moc"
