@@ -28,7 +28,11 @@
      <number>0</number>
     </property>
     <item>
-     <widget class="QTableWidget" name="tableWidget"/>
+     <widget class="QTableWidget" name="tableWidget">
+      <property name="selectionMode">
+       <enum>QAbstractItemView::ContiguousSelection</enum>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -38,7 +42,7 @@
      <x>0</x>
      <y>0</y>
      <width>814</width>
-     <height>26</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -114,7 +118,7 @@
   </action>
   <action name="actionClear">
    <property name="text">
-    <string>&amp;Clear</string>
+    <string>C&amp;lear</string>
    </property>
    <property name="shortcut">
     <string>Del</string>
@@ -130,7 +134,7 @@
   </action>
   <action name="actionPastePrepend">
    <property name="text">
-    <string>Paste Prepend</string>
+    <string>Past&amp;e Prepend</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+B</string>
