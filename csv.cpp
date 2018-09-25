@@ -95,7 +95,10 @@ QList<QStringList> CSV::parseFromFile(const QString &filename, const QString &co
     return parse(initString(string));
 }
 
-bool CSV::write(const QList<QStringList> data, const QString &filename, const QString &codec)
+bool CSV::write(const QList<QStringList> data,
+                const QString &filename,
+                const QString &codec,
+                const QString &crlf)
 {
     QFile file(filename);
     if (!file.open(QIODevice::WriteOnly)) {
@@ -118,7 +121,7 @@ bool CSV::write(const QList<QStringList> data, const QString &filename, const QS
                 output << value;
             }
         }
-        out << output.join(",") << "\r\n";
+        out << output.join(",") << crlf;
     }
 
     file.close();

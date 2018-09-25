@@ -8,6 +8,8 @@
 #include <QMessageBox>
 #include <QCloseEvent>
 #include <QDesktopServices>
+#include <QRegularExpression>
+#include <QRegularExpressionMatchIterator>
 
 class Command {
 public:
@@ -242,7 +244,18 @@ QString MainWindow::_getOpenFile()
 
 void MainWindow::openFile(QString fname)
 {
-    QList<QStringList> cont = CSV::parseFromFile(fname, "UTF-8");
+    QString strCont;
+    QFile file(fname);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::critical(this, "Error", "Cannot open " + fname);
+        return;
+    }
+    QTextStream stm(&file);
+    stm.setCodec("UTF-8");
+    strCont = stm.readAll();
+    file.close();
+
+    QList<QStringList> cont = CSV::parseFromString(strCont);
 
     ui->tableWidget->clear();
     m_cc->clear();
@@ -268,6 +281,7 @@ void MainWindow::openFile(QString fname)
     ui->tableWidget->resizeColumnsToContents();
 
     m_filename = fname;
+    m_crlf = _guessCrlf(strCont);
     updateTitle();
 }
 
@@ -304,7 +318,7 @@ void MainWindow::on_actionSave_triggered()
         data.append(row);
     }
 
-    CSV::write(data, m_filename, "UTF-8");
+    CSV::write(data, m_filename, "UTF-8", m_crlf);
 
     m_dirt = false;
     updateTitle();
@@ -401,6 +415,31 @@ void MainWindow::onChanged()
 {
     m_dirt = true;
     updateTitle();
+}
+
+QString MainWindow::_guessCrlf(const QString & cont)
+{
+    int crlf = 0, lf = 0, cr = 0;
+
+    QRegularExpression re("(\\r\\n|\\n|\\r)");
+    QRegularExpressionMatchIterator i = re.globalMatch(cont);
+
+    while (i.hasNext()) {
+        QRegularExpressionMatch match = i.next();
+        QString x = match.captured(1);
+        if (x == "\r\n")
+            crlf += 1;
+        else if (x == "\n")
+            lf += 1;
+        else if (x == "\r")
+            cr += 1;
+    }
+
+    if (lf >= crlf && lf >= cr)
+        return "\n";
+    if (crlf >= cr)
+        return "\r\n";
+    return "\r";
 }
 
 

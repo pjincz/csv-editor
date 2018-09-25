@@ -24,6 +24,7 @@ protected:
 
 private:
     QString _getOpenFile();
+    QString _guessCrlf(const QString & cont);
     void updateTitle();
 
 public slots:
@@ -48,6 +49,7 @@ private:
     Ui::MainWindow *ui;
 
     QString m_filename;
+    QString m_crlf = "\n";
     CommandCenter * m_cc;
     bool m_dirt;
 };
