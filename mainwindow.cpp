@@ -13,7 +13,7 @@ class Command {
 public:
     virtual void redo(QTableWidget * tw) = 0;
     virtual void undo(QTableWidget * tw) = 0;
-    virtual ~Command() = 0 {};
+    virtual ~Command() {};
 };
 
 class SetDataCommand : public Command {
