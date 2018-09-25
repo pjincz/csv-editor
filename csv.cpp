@@ -128,3 +128,26 @@ bool CSV::write(const QList<QStringList> data,
 
     return true;
 }
+
+QString CSV::toString(const QList<QStringList> data,
+                      const QString &crlf)
+{
+    QString r;
+    QTextStream out(&r);
+
+    foreach (const QStringList &line, data) {
+        QStringList output;
+        foreach (QString value, line) {
+            if (value.contains(QRegExp(",|\r\n"))) {
+                output << ("\"" + value + "\"");
+            } else if (value.contains("\"")) {
+                output << value.replace("\"", "\"\"");
+            } else {
+                output << value;
+            }
+        }
+        out << output.join(",") << crlf;
+    }
+
+    return r;
+}

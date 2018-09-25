@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QSettings>
 #include <QClipboard>
+#include <QMimeData>
 #include <QMessageBox>
 #include <QCloseEvent>
 #include <QDesktopServices>
@@ -336,7 +337,22 @@ void MainWindow::on_actionCopy_triggered()
     QTableWidget * tw = ui->tableWidget;
 
     QClipboard * clip = QGuiApplication::clipboard();
-    clip->setText(tw->currentItem()->text());
+    QMimeData * data = new QMimeData();
+    data->setText(tw->currentItem()->text());
+
+    QTableWidgetSelectionRange rg = tw->selectedRanges()[0];
+    QList<QStringList> csvData;
+    for (int row = rg.topRow(); row <= rg.bottomRow(); ++row) {
+        QStringList csvRow;
+        for (int col = rg.leftColumn(); col <= rg.rightColumn(); ++col) {
+            csvRow << tw->item(row, col)->text();
+        }
+        csvData << csvRow;
+    }
+    QString csv = CSV::toString(csvData);
+    data->setData("text/csv", csv.toUtf8());
+
+    clip->setMimeData(data);
 }
 
 void MainWindow::on_actionPaste_triggered()
@@ -346,11 +362,26 @@ void MainWindow::on_actionPaste_triggered()
     QTableWidget * tw = ui->tableWidget;
 
     QClipboard * clip = QGuiApplication::clipboard();
-    QString text = clip->text();
+    const QMimeData * mime = clip->mimeData();
 
-    QList<QTableWidgetItem*> si = tw->selectedItems();
-    for (QTableWidgetItem* item : si) {
-        item->setText(text);
+    QList<QStringList> grid;
+    if (mime->hasFormat("text/csv")) {
+        QString csv = QString::fromUtf8(mime->data("text/csv"));
+        grid = CSV::parseFromString(csv);
+    } else {
+        QStringList sl;
+        sl << mime->text();
+        grid << sl;
+    }
+
+    QTableWidgetSelectionRange rg = tw->selectedRanges()[0];
+    for (int row = rg.topRow(); row <= rg.bottomRow(); ++row) {
+        for (int col = rg.leftColumn(); col <= rg.rightColumn(); ++col) {
+            QTableWidgetItem * item = tw->item(row, col);
+            QStringList x = grid[(row - rg.topRow()) % grid.length()];
+            QString text = x[(col - rg.leftColumn()) % x.length()];
+            item->setText(text);
+        }
     }
 }
 

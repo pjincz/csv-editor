@@ -13,6 +13,9 @@ namespace CSV
             const QString &filename,
             const QString &codec = QString(),
             const QString &crlf = "\r\n");
+
+    QString toString(const QList<QStringList> data,
+                     const QString &crlf = "\r\n");
 }
 
 #endif // CSV_H
