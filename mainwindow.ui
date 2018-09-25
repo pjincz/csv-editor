@@ -40,6 +40,7 @@
     <addaction name="actionRedo"/>
     <addaction name="separator"/>
     <addaction name="actionCopy"/>
+    <addaction name="actionCut"/>
     <addaction name="actionPaste"/>
     <addaction name="separator"/>
     <addaction name="actionClear"/>
@@ -78,7 +79,7 @@
   </action>
   <action name="actionCopy">
    <property name="text">
-    <string>&amp;Copy</string>
+    <string>Copy</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
@@ -86,7 +87,7 @@
   </action>
   <action name="actionPaste">
    <property name="text">
-    <string>&amp;Paste</string>
+    <string>Paste</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+V</string>
@@ -98,22 +99,6 @@
    </property>
    <property name="shortcut">
     <string>Del</string>
-   </property>
-  </action>
-  <action name="actionPasteAppend">
-   <property name="text">
-    <string>Paste &amp;Append</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+A</string>
-   </property>
-  </action>
-  <action name="actionPastePrepend">
-   <property name="text">
-    <string>Past&amp;e Prepend</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+B</string>
    </property>
   </action>
   <action name="actionUndo">
@@ -135,6 +120,14 @@
   <action name="actionAbout">
    <property name="text">
     <string>&amp;About</string>
+   </property>
+  </action>
+  <action name="actionCut">
+   <property name="text">
+    <string>Cut</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+X</string>
    </property>
   </action>
  </widget>

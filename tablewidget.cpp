@@ -1,4 +1,5 @@
 #include "tablewidget.h"
+#include <QStack>
 
 class Command {
 public:
@@ -50,24 +51,26 @@ class CommandCenter : public QObject {
 
 public:
     CommandCenter(QObject * parent, QTableWidget * tw)
-        : QObject(parent), m_tw(tw), m_curStatus(0), m_inTransaction(false)
+        : QObject(parent), m_tw(tw), m_curStatus(0)
     {
     }
 
     void begin(const QString &name) {
-        while (m_history.length() > m_curStatus) {
-            m_history.pop_back();
+        if (m_transStack.empty()) {
+            while (m_history.length() > m_curStatus) {
+                m_history.pop_back();
+            }
+
+            m_history.push_back(CommandGroup());
+            m_history.last().name = name;
+            m_history.last().prevSelection = m_tw->selectedRanges();
         }
 
-        m_history.push_back(CommandGroup());
-        m_history.last().name = name;
-        m_history.last().prevSelection = m_tw->selectedRanges();
-
-        m_inTransaction = true;
+        m_transStack.push(name);
     }
 
     void addCommand(Command * cmd) {
-        if (m_inTransaction) {
+        if (!m_transStack.empty()) {
             m_history.last().append(QSharedPointer<Command>(cmd));
             cmd->redo(m_tw);
         } else {
@@ -78,19 +81,21 @@ public:
     }
 
     void commit() {
-        if (!m_inTransaction)
+        if (m_transStack.empty())
             return;
 
-        if (m_history.last().length() > 0) {
-            m_curStatus += 1;
-            m_history.last().postSelection = m_tw->selectedRanges();
+        m_transStack.pop();
+
+        if (m_transStack.empty()) {
+            if (m_history.last().length() > 0) {
+                m_curStatus += 1;
+                m_history.last().postSelection = m_tw->selectedRanges();
+            }
+            else
+                m_history.pop_back();
+
+            emit commited();
         }
-        else
-            m_history.pop_back();
-
-        m_inTransaction = false;
-
-        emit commited();
     }
 
     void undo() {
@@ -132,7 +137,7 @@ public:
     void clear() {
         m_history.clear();
         m_curStatus = 0;
-        m_inTransaction = false;
+        m_transStack.clear();
     }
 
     int length() {
@@ -148,7 +153,7 @@ private:
     QTableWidget * m_tw;
     QList<CommandGroup> m_history;
     int m_curStatus;
-    bool m_inTransaction;
+    QStack<QString> m_transStack;
 };
 
 

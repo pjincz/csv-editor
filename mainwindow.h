@@ -33,6 +33,7 @@ public slots:
     void on_actionExit_triggered();
 
     void on_actionCopy_triggered();
+    void on_actionCut_triggered();
     void on_actionPaste_triggered();
     void on_actionClear_triggered();
 

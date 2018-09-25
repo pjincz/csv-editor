@@ -166,6 +166,14 @@ void MainWindow::on_actionCopy_triggered()
     clip->setMimeData(data);
 }
 
+void MainWindow::on_actionCut_triggered()
+{
+    TableWidgetTransaction ts(m_tw, "Cut");
+
+    on_actionCopy_triggered();
+    on_actionClear_triggered();
+}
+
 void MainWindow::on_actionPaste_triggered()
 {
     TableWidgetTransaction ts(m_tw, "Paste");
